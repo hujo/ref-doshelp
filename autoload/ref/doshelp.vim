@@ -5,8 +5,7 @@ set cpo&vim
 let s:source = {'name': 'doshelp'}
 
 function! s:system(cmd, ...)
-  if get(g:, 'ref_use_vimproc', 0)
-  \   && exists(':VimProcBang') && executable(split(a:cmd)[0])
+  if get(g:, 'ref_use_vimproc', 0) && exists(':VimProcBang')
     let res = vimproc#system(a:cmd)
   else
     let res = system(a:cmd)
@@ -34,13 +33,23 @@ function! s:source.available() abort
   return has('win32') && executable('help')
 endfunction
 function! s:source.get_body(query) abort
-  let q = matchstr(toupper(a:query), '\v\C^[A-Z]+$')
+  let cmds = split(a:query)
+  let cmdname = get(cmds, 0,'')
+  let q = matchstr(toupper(cmdname), '\v\C^[A-Z]+$')
   if index(s:getCmdList(), q) != -1
-    let res = s:system(printf('cmd /c %s /?',q), 1)
+    if q ==# 'SC'
+      let cmd = ''
+    else
+      if cmds[-1] ==# '/?'
+        let cmd = printf('cmd /c %s',q . join(cmds[1:]))
+      else
+        let cmd = printf('cmd /c %s /?',q)
+      endif
+    endif
   else
-    let res = s:system(printf('cmd /c help %s', a:query), 1)
+    let cmd = printf('cmd /c help %s', q)
   endif
-  return join(map(res, 'substitute(v:val, ''\v\s+$'', '''', ''g'')'), "\n")
+  return join(map(s:system(cmd, 1), 'substitute(v:val, ''\v\s+$'', '''', ''g'')'), "\n")
 endfunction
 function! s:source.get_keyword() abort
   return expand('<cword>')
